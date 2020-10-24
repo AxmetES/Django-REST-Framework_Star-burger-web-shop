@@ -3,3 +3,10 @@ db.sqlite3
 .cache
 node_modules/
 media/
+/.vscode
+/.venv
+/StarBurger/__pycache__
+/foodcartapp/__pycache__
+/foodcartapp/migrations/__pycache__
+/restaurateur/__pycache__
+restaurateur/migrations/__pycache__
