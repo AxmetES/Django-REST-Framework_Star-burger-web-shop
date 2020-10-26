@@ -1,9 +1,10 @@
 import json
 
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from django.templatetags.static import static
 
-from .models import Product
+from .models import Product, Order, OrderDetails
 
 
 def banners_list_api(request):
@@ -60,12 +61,25 @@ def product_list_api(request):
 
 def register_order(request):
     try:
-        data = json.loads(request.body.decode())
+        order_info = json.loads(request.body.decode())
     except ValueError:
         return JsonResponse({
-            'error': 'bla bla bla',
+            'error': 'Order info request not received.',
         })
-    print(data)
-    print('---------------------------------------')
+    order, is_created = Order.objects.update_or_create(name=order_info['firstname'],
+                                                       last_name=order_info['lastname'],
+                                                       phone_number=order_info['phonenumber'],
+                                                       address=order_info['address'])
+
+    for product_item in order_info['products']:
+        product = get_object_or_404(Product, id=product_item['product'])
+        order_detail, is_created = OrderDetails.objects.get_or_create(product=product, order=order,
+                                                                      defaults={
+                                                                          'quantity': product_item['quantity']})
+
+        if not is_created:
+            # current_quantity =
+            order_detail.quantity = order_detail.quantity + product_item['quantity']
+            order_detail.save()
 
     return JsonResponse({})

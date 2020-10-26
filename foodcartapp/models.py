@@ -1,5 +1,6 @@
-from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from phonenumber_field.modelfields import PhoneNumberField
 
 
 class Restaurant(models.Model):
@@ -31,6 +32,21 @@ class ProductCategory(models.Model):
         return self.name
 
 
+class Order(models.Model):
+    name = models.CharField(max_length=50, verbose_name='имя')
+    last_name = models.CharField(max_length=50, verbose_name='фамилия')
+    address = models.CharField(max_length=100, verbose_name='адресс')
+    phone_number = PhoneNumberField()
+
+    def __str__(self):
+        template = f'{self.name} {self.last_name}'
+        return template
+
+    class Meta:
+        verbose_name = 'заказ'
+        verbose_name_plural = 'заказы'
+
+
 class Product(models.Model):
     name = models.CharField('название', max_length=50)
     category = models.ForeignKey(ProductCategory, null=True, blank=True, on_delete=models.SET_NULL,
@@ -48,6 +64,20 @@ class Product(models.Model):
     class Meta:
         verbose_name = 'товар'
         verbose_name_plural = 'товары'
+
+
+class OrderDetails(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='products', verbose_name='продукт')
+    quantity = models.IntegerField('количество', validators=[MinValueValidator(1), MaxValueValidator(100)])
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='details', verbose_name='заказ')
+
+    def __str__(self):
+        template = f'{self.product}, {self.order}'
+        return template
+
+    class Meta:
+        verbose_name = 'деталь заказа'
+        verbose_name_plural = 'детали заказа'
 
 
 class RestaurantMenuItem(models.Model):
