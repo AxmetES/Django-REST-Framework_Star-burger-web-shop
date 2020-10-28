@@ -1,8 +1,9 @@
-import json
-
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.templatetags.static import static
+from rest_framework.decorators import api_view, renderer_classes
+from rest_framework.renderers import JSONRenderer
+from rest_framework.response import Response
 
 from .models import Product, Order, OrderDetails
 
@@ -59,13 +60,9 @@ def product_list_api(request):
     })
 
 
+@api_view(['POST'])
 def register_order(request):
-    try:
-        order_info = json.loads(request.body.decode())
-    except ValueError:
-        return JsonResponse({
-            'error': 'Order info request not received.',
-        })
+    order_info = request.data
     order, is_created = Order.objects.update_or_create(name=order_info['firstname'],
                                                        last_name=order_info['lastname'],
                                                        phone_number=order_info['phonenumber'],
@@ -78,8 +75,7 @@ def register_order(request):
                                                                           'quantity': product_item['quantity']})
 
         if not is_created:
-            # current_quantity =
             order_detail.quantity = order_detail.quantity + product_item['quantity']
             order_detail.save()
+    return Response()
 
-    return JsonResponse({})
