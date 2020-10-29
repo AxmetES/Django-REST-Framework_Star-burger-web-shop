@@ -1,8 +1,8 @@
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.templatetags.static import static
-from rest_framework.decorators import api_view, renderer_classes
-from rest_framework.renderers import JSONRenderer
+from rest_framework import status
+from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from .models import Product, Order, OrderDetails
@@ -63,19 +63,23 @@ def product_list_api(request):
 @api_view(['POST'])
 def register_order(request):
     order_info = request.data
-    order, is_created = Order.objects.update_or_create(name=order_info['firstname'],
-                                                       last_name=order_info['lastname'],
-                                                       phone_number=order_info['phonenumber'],
-                                                       address=order_info['address'])
+    print('------------------->>')
+    if isinstance(order_info, dict) and 'products' in order_info.keys() and isinstance(order_info['products'],
+                                                                                       list) and order_info['products']:
+        order, is_created = Order.objects.update_or_create(name=order_info['firstname'],
+                                                           last_name=order_info['lastname'],
+                                                           phone_number=order_info['phonenumber'],
+                                                           address=order_info['address'])
 
-    for product_item in order_info['products']:
-        product = get_object_or_404(Product, id=product_item['product'])
-        order_detail, is_created = OrderDetails.objects.get_or_create(product=product, order=order,
-                                                                      defaults={
-                                                                          'quantity': product_item['quantity']})
+        for product_item in order_info['products']:
+            product = get_object_or_404(Product, id=product_item['product'])
+            order_detail, is_created = OrderDetails.objects.get_or_create(product=product, order=order,
+                                                                          defaults={
+                                                                              'quantity': product_item['quantity']})
 
-        if not is_created:
-            order_detail.quantity = order_detail.quantity + product_item['quantity']
-            order_detail.save()
-    return Response()
+            if not is_created:
+                order_detail.quantity = order_detail.quantity + product_item['quantity']
+                order_detail.save()
+            return Response(status=status.HTTP_200_OK)
 
+    return Response(status=status.HTTP_400_BAD_REQUEST)
