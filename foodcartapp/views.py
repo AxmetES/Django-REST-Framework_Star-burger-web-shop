@@ -1,3 +1,4 @@
+from django.db import IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.templatetags.static import static
@@ -62,10 +63,19 @@ def product_list_api(request):
 
 @api_view(['POST'])
 def register_order(request):
-    order_info = request.data
     print('------------------->>')
-    if isinstance(order_info, dict) and 'products' in order_info.keys() and isinstance(order_info['products'],
-                                                                                       list) and order_info['products']:
+    # if isinstance(order_info, dict) and 'products' in order_info.keys() and isinstance(order_info['products'],
+    #                                                                                    list) and order_info[
+    #     'products'] and isinstance(order_info['firstname'], str) and 'firstname' :
+    try:
+        order_info = request.data
+        if not order_info["products"]:
+            raise TypeError
+        if order_info['phonenumber'] == '':
+            raise ValueError
+        if not isinstance(order_info['firstname'], str):
+            raise TypeError
+
         order, is_created = Order.objects.update_or_create(name=order_info['firstname'],
                                                            last_name=order_info['lastname'],
                                                            phone_number=order_info['phonenumber'],
@@ -81,5 +91,7 @@ def register_order(request):
                 order_detail.quantity = order_detail.quantity + product_item['quantity']
                 order_detail.save()
             return Response(status=status.HTTP_200_OK)
+    except (TypeError, KeyError, IntegrityError, ValueError):
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
-    return Response(status=status.HTTP_400_BAD_REQUEST)
+# {"products":  [{"product": 2, "quantity": 2}], "firstname": "1", "lastname": "2", "phonenumber": "3", "address": "4"}
