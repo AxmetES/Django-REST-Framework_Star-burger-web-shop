@@ -118,8 +118,8 @@ class ProductAdmin(admin.ModelAdmin):
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display = [
-        'name',
-        'last_name',
+        'firstname',
+        'lastname',
         'address'
     ]
     inlines = [

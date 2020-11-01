@@ -1,12 +1,11 @@
-from django.db import IntegrityError
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
 from django.templatetags.static import static
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from .models import Product, Order, OrderDetails
+from .serializers import OrderSerializer
 
 
 def banners_list_api(request):
@@ -63,35 +62,19 @@ def product_list_api(request):
 
 @api_view(['POST'])
 def register_order(request):
-    print('------------------->>')
-    # if isinstance(order_info, dict) and 'products' in order_info.keys() and isinstance(order_info['products'],
-    #                                                                                    list) and order_info[
-    #     'products'] and isinstance(order_info['firstname'], str) and 'firstname' :
-    try:
-        order_info = request.data
-        if not order_info["products"]:
-            raise TypeError
-        if order_info['phonenumber'] == '':
-            raise ValueError
-        if not isinstance(order_info['firstname'], str):
-            raise TypeError
+    serializer = OrderSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    order, is_created = Order.objects.update_or_create(firstname=serializer.validated_data['firstname'],
+                                                       lastname=serializer.validated_data['lastname'],
+                                                       phonenumber=serializer.validated_data['phonenumber'],
+                                                       address=serializer.validated_data['address'])
 
-        order, is_created = Order.objects.update_or_create(name=order_info['firstname'],
-                                                           last_name=order_info['lastname'],
-                                                           phone_number=order_info['phonenumber'],
-                                                           address=order_info['address'])
+    for product in serializer.validated_data['products']:
+        order_detail, is_created = OrderDetails.objects.get_or_create(product=product['product'], order=order,
+                                                                      defaults={
+                                                                          'quantity': product['quantity']})
 
-        for product_item in order_info['products']:
-            product = get_object_or_404(Product, id=product_item['product'])
-            order_detail, is_created = OrderDetails.objects.get_or_create(product=product, order=order,
-                                                                          defaults={
-                                                                              'quantity': product_item['quantity']})
-
-            if not is_created:
-                order_detail.quantity = order_detail.quantity + product_item['quantity']
-                order_detail.save()
-            return Response(status=status.HTTP_200_OK)
-    except (TypeError, KeyError, IntegrityError, ValueError):
-        return Response(status=status.HTTP_400_BAD_REQUEST)
-
-# {"products":  [{"product": 2, "quantity": 2}], "firstname": "1", "lastname": "2", "phonenumber": "3", "address": "4"}
+        if not is_created:
+            order_detail.quantity = order_detail.quantity + product['quantity']
+            order_detail.save()
+        return Response(status=status.HTTP_200_OK)

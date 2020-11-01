@@ -32,21 +32,6 @@ class ProductCategory(models.Model):
         return self.name
 
 
-class Order(models.Model):
-    name = models.CharField(max_length=50, verbose_name='имя')
-    last_name = models.CharField(max_length=50, verbose_name='фамилия')
-    address = models.CharField(max_length=100, verbose_name='адресс')
-    phone_number = PhoneNumberField()
-
-    def __str__(self):
-        template = f'{self.name} {self.last_name}'
-        return template
-
-    class Meta:
-        verbose_name = 'заказ'
-        verbose_name_plural = 'заказы'
-
-
 class Product(models.Model):
     name = models.CharField('название', max_length=50)
     category = models.ForeignKey(ProductCategory, null=True, blank=True, on_delete=models.SET_NULL,
@@ -64,6 +49,21 @@ class Product(models.Model):
     class Meta:
         verbose_name = 'товар'
         verbose_name_plural = 'товары'
+
+
+class Order(models.Model):
+    firstname = models.CharField(max_length=50, verbose_name='имя')
+    lastname = models.CharField(max_length=50, verbose_name='фамилия')
+    address = models.CharField(max_length=100, verbose_name='адресс')
+    phonenumber = PhoneNumberField()
+
+    def __str__(self):
+        template = f'{self.firstname} {self.lastname}'
+        return template
+
+    class Meta:
+        verbose_name = 'заказ'
+        verbose_name_plural = 'заказы'
 
 
 class OrderDetails(models.Model):
