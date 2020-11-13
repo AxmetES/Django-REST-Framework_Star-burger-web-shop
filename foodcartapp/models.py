@@ -1,6 +1,6 @@
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
-from phonenumber_field.modelfields import PhoneNumberField
+from django.db.models import Sum, F
 
 
 class Restaurant(models.Model):
@@ -55,7 +55,11 @@ class Order(models.Model):
     firstname = models.CharField(max_length=50, verbose_name='имя')
     lastname = models.CharField(max_length=50, verbose_name='фамилия')
     address = models.CharField(max_length=100, verbose_name='адресс')
-    phonenumber = PhoneNumberField()
+    phonenumber = models.CharField(max_length=10, verbose_name='номер телефона')
+
+    def get_order_price_sum(self):
+        order_sum = Order.objects.aggregate(order_price_sum=Sum('details__product_price'))
+        return order_sum['order_price_sum']
 
     def __str__(self):
         template = f'{self.firstname} {self.lastname}'
@@ -70,6 +74,7 @@ class OrderDetails(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='products', verbose_name='продукт')
     quantity = models.IntegerField('количество', validators=[MinValueValidator(1), MaxValueValidator(100)])
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='details', verbose_name='заказ')
+    product_price = models.FloatField('сумма цен продукта', null=True)
 
     def __str__(self):
         template = f'{self.product}, {self.order}'

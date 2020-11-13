@@ -1,4 +1,8 @@
+import decimal
+
+from django.db import transaction
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from django.templatetags.static import static
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -60,6 +64,7 @@ def product_list_api(request):
     })
 
 
+@transaction.atomic()
 @api_view(['POST'])
 def register_order(request):
     serializer = OrderSerializer(data=request.data)
@@ -67,14 +72,25 @@ def register_order(request):
     order, is_created = Order.objects.update_or_create(firstname=serializer.validated_data['firstname'],
                                                        lastname=serializer.validated_data['lastname'],
                                                        phonenumber=serializer.validated_data['phonenumber'],
-                                                       address=serializer.validated_data['address'])
+                                                       address=serializer.validated_data['address'], )
 
-    for product in serializer.validated_data['products']:
-        order_detail, is_created = OrderDetails.objects.get_or_create(product=product['product'], order=order,
+    for product_item in serializer.validated_data['products']:
+        order_detail, is_created = OrderDetails.objects.get_or_create(product=product_item['product'],
+                                                                      order=order,
                                                                       defaults={
-                                                                          'quantity': product['quantity']})
-
+                                                                          'quantity': product_item['quantity'],
+                                                                          'product_price': product_item[
+                                                                                               'product'].price *
+                                                                                           product_item['quantity']})
         if not is_created:
-            order_detail.quantity = order_detail.quantity + product['quantity']
+            order_detail.quantity = order_detail.quantity + product_item['quantity']
+            order_detail.product_price = order_detail.product_price + float((
+                product_item['product'].price * product_item['quantity']))
             order_detail.save()
-        return Response(status=status.HTTP_200_OK)
+
+    serializer = OrderSerializer(order)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+{"products": [{"product": 1, "quantity": 1}], "firstname": "Yerkin", "lastname": "Akhmetzhanov",
+ "phonenumber": "+77055197334", "address": "5 E, Sarayshyq str,apt 32"}
