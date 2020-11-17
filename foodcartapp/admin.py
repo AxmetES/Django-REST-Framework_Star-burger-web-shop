@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.forms import ModelForm
+from django.http import HttpResponseRedirect
 from django.shortcuts import reverse
 from django.utils.html import format_html
 
@@ -104,7 +106,8 @@ class ProductAdmin(admin.ModelAdmin):
         if not obj.image or not obj.id:
             return 'нет картинки'
         edit_url = reverse('admin:foodcartapp_product_change', args=(obj.id,))
-        return format_html('<a href="{edit_url}"><img src="{src}" height="50"/></a>', edit_url=edit_url,
+        return format_html('<a href="{edit_url}"><img src="{src}" height="50"/></a>',
+                           edit_url=edit_url,
                            src=obj.image.url)
 
     get_image_list_preview.short_description = 'превью'
@@ -117,6 +120,15 @@ class ProductAdmin(admin.ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
+    form = ModelForm
+
+    def response_change(self, request, obj):
+        res = super(OrderAdmin, self).response_post_save_change(request, obj)
+        if "next" in request.GET:
+            return HttpResponseRedirect(request.GET['next'])
+        else:
+            return res
+
     list_display = [
         'firstname',
         'lastname',

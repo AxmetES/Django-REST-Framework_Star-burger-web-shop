@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.db.models import Sum, F
@@ -52,10 +54,21 @@ class Product(models.Model):
 
 
 class Order(models.Model):
+    NOT_PROCESSED = 'необработанный'
+    PROCESSED = 'обработанный'
+    ORDER_STATUS = [
+        (NOT_PROCESSED, 'not processed'),
+        (PROCESSED, 'processed'),
+    ]
+    order_status = models.CharField(max_length=14, choices=ORDER_STATUS, default=NOT_PROCESSED)
     firstname = models.CharField(max_length=50, verbose_name='имя')
     lastname = models.CharField(max_length=50, verbose_name='фамилия')
     address = models.CharField(max_length=100, verbose_name='адресс')
     phonenumber = models.CharField(max_length=10, verbose_name='номер телефона')
+    comment = models.TextField(verbose_name='комментарии', blank=True)
+    timestamp = models.DateTimeField(default=date.today(), blank=True, null=True)
+    call_time = models.DateTimeField(blank=True, null=True)
+    delivery_time = models.DateTimeField(blank=True, null=True)
 
     def get_order_price_sum(self):
         order_sum = Order.objects.aggregate(order_price_sum=Sum('details__product_price'))
