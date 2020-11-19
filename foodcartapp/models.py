@@ -60,7 +60,14 @@ class Order(models.Model):
         (NOT_PROCESSED, 'not processed'),
         (PROCESSED, 'processed'),
     ]
+    CART_PAYMENT = 'оплата картой'
+    CASH_PAYMENT = 'оплата наличными'
+    PAYMENT_METHOD = [
+        (CART_PAYMENT, 'оплата картой'),
+        (PROCESSED, 'processed'),
+    ]
     order_status = models.CharField(max_length=14, choices=ORDER_STATUS, default=NOT_PROCESSED)
+    payment_method = models.CharField(max_length=13, choices=PAYMENT_METHOD, default=CART_PAYMENT)
     firstname = models.CharField(max_length=50, verbose_name='имя')
     lastname = models.CharField(max_length=50, verbose_name='фамилия')
     address = models.CharField(max_length=100, verbose_name='адресс')
@@ -71,8 +78,22 @@ class Order(models.Model):
     delivery_time = models.DateTimeField(blank=True, null=True)
 
     def get_order_price_sum(self):
-        order_sum = Order.objects.aggregate(order_price_sum=Sum('details__product_price'))
+        order_sum = Order.objects.filter(pk=self.id).aggregate(order_price_sum=Sum('details__product_price'))
         return order_sum['order_price_sum']
+
+    def get_restaurant(self):
+        products = []
+        restaurants = set()
+
+        order_details = self.details.prefetch_related('product')
+        for detail in order_details:
+            products.append(detail.product)
+        for product in products:
+            rest_querys = RestaurantMenuItem.objects.prefetch_related('restaurant').filter(product=product)
+            for rest in rest_querys:
+                restaurants.add(rest.restaurant.name)
+
+        return ','.join(str(s) for s in restaurants)
 
     def __str__(self):
         template = f'{self.firstname} {self.lastname}'

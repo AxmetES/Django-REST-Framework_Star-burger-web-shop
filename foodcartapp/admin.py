@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.forms import ModelForm
 from django.http import HttpResponseRedirect
-from django.shortcuts import reverse
+from django.shortcuts import reverse, redirect
 from django.utils.html import format_html
 
 from .models import Order
@@ -125,7 +125,7 @@ class OrderAdmin(admin.ModelAdmin):
     def response_change(self, request, obj):
         res = super(OrderAdmin, self).response_post_save_change(request, obj)
         if "next" in request.GET:
-            return HttpResponseRedirect(request.GET['next'])
+            return redirect(request.GET['next'])
         else:
             return res
 
