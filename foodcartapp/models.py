@@ -2,7 +2,27 @@ from datetime import date
 
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
-from django.db.models import Sum, F
+from django.db.models import Sum
+import requests
+from environs import Env
+from geopy import distance
+from django.core.cache import cache
+
+env = Env()
+env.read_env()
+
+apikey = env('geo_api')
+
+
+def fetch_coordinates(apikey, place):
+    base_url = "https://geocode-maps.yandex.ru/1.x"
+    params = {"geocode": place, "apikey": apikey, "format": "json"}
+    response = requests.get(base_url, params=params)
+    response.raise_for_status()
+    places_found = response.json()['response']['GeoObjectCollection']['featureMember']
+    most_relevant = places_found[0]
+    lon, lat = most_relevant['GeoObject']['Point']['pos'].split(" ")
+    return lon, lat
 
 
 class Restaurant(models.Model):
@@ -81,19 +101,25 @@ class Order(models.Model):
         order_sum = Order.objects.filter(pk=self.id).aggregate(order_price_sum=Sum('details__product_price'))
         return order_sum['order_price_sum']
 
-    def get_restaurant(self):
-        products = []
-        restaurants = set()
-
+    def get_restaurant_distance(self):
+        rest_distance = set()
         order_details = self.details.prefetch_related('product')
-        for detail in order_details:
-            products.append(detail.product)
-        for product in products:
-            rest_querys = RestaurantMenuItem.objects.prefetch_related('restaurant').filter(product=product)
-            for rest in rest_querys:
-                restaurants.add(rest.restaurant.name)
+        products_id = [detail.product_id for detail in order_details]
 
-        return ','.join(str(s) for s in restaurants)
+        for product_id in products_id:
+            rest_queryset = RestaurantMenuItem.objects.prefetch_related('restaurant').filter(product__id=product_id)
+            for rest in rest_queryset:
+                restaurant_distance = cache.get(rest.restaurant.name)
+                if not restaurant_distance:
+                    restaurant_distance = distance.distance(
+                        fetch_coordinates(apikey, f"{rest.restaurant.name},{rest.restaurant.address}"),
+                        fetch_coordinates(apikey, self.address)).km
+                    cache.set(rest.restaurant.name, restaurant_distance, 300)
+
+                rest_distance.add(
+                    f"{rest.restaurant.name} - {format(restaurant_distance, '.2f')} km,"
+                )
+        return f"{' '.join(str(s) for s in rest_distance)}"
 
     def __str__(self):
         template = f'{self.firstname} {self.lastname}'
