@@ -90,7 +90,3 @@ def register_order(request):
 
     serializer = OrderSerializer(order)
     return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-{"products": [{"product": 1, "quantity": 1}], "firstname": "Yerkin", "lastname": "Akhmetzhanov",
- "phonenumber": "+77055197334", "address": "5 E, Sarayshyq str,apt 32"}
